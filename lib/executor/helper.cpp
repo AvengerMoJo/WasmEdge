@@ -80,15 +80,18 @@ Executor::enterFunction(Runtime::StoreManager &StoreMgr,
 
     Span<ValVariant> Args = StackMgr.getTopSpan(ArgsN);
     std::vector<ValVariant> Rets(RetsN);
+    std::vector<uint8_t *> MemoryPtrs;
 
     {
       CurrentStore = &StoreMgr;
       const auto &ModInst = **StoreMgr.getModule(Func.getModuleAddr());
-      ExecutionContext.Memory =
-          ModInst.getMemNum() > 0
-              ? (*StoreMgr.getMemory(*ModInst.getMemAddr(0)))->getDataPtr()
-              : nullptr;
-      ExecutionContext.Globals = ModInst.GlobalsPtr.data();
+      MemoryPtrs.resize(ModInst.getMemNum());
+      for (uint32_t I = 0; I < ModInst.getMemNum(); ++I) {
+        MemoryPtrs[I] =
+            (*StoreMgr.getMemory(*ModInst.getMemAddr(I)))->getDataPtr();
+      }
+      ExecutionContext.Memories = MemoryPtrs.data();
+      ExecutionContext.Globals = ModInst.GlobalPtrs.data();
     }
 
     {
